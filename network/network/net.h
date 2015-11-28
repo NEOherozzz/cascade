@@ -6,6 +6,7 @@
 
 using namespace std;
 
+//const double ALPHA = 0.7;
 const double ALPHA = 0.7;
 const double BETA = 0.2;
 
