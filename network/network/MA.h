@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include "net.h"
+#include "file-data.h"
 
 //MA文化基因优化算法
 
@@ -93,32 +94,59 @@ optSolution MA(Net A, Net B, double p, MApara para) {
 					if (pop[rd1][j].first.num == pop[rd2][j].first.num && pop[rd1][j].second.num != pop[rd2][j].second.num) {
 						popc[rd1][j].second = pop[rd2][j].second;
 						num = searchSec(pop[rd1][j].second.num, pop[rd1]);
-						popc[rd1][num].second = pop[rd1][j].second;
+						if (num != -1) {
+							popc[rd1][num].second = pop[rd1][j].second;
+						}
 						popc[rd2][j].second = pop[rd1][j].second;
 						num = searchSec(pop[rd2][j].second.num, pop[rd2]);
-						popc[rd2][num].second = pop[rd2][j].second;
+						if (num != -1) {
+							popc[rd2][num].second = pop[rd2][j].second;
+						}
 					}
 					else if (pop[rd1][j].first.num != pop[rd2][j].first.num && pop[rd1][j].second.num == pop[rd2][j].second.num) {
 						popc[rd1][j].first = pop[rd2][j].first;
 						num = searchFir(pop[rd1][j].first.num, pop[rd1]);
-						popc[rd1][num].first = pop[rd1][j].first;
+						if (num != -1) {
+							popc[rd1][num].first = pop[rd1][j].first;
+						}
 						popc[rd2][j].first = pop[rd1][j].first;
 						num = searchFir(pop[rd2][j].first.num, pop[rd2]);
-						popc[rd2][num].first = pop[rd2][j].first;
+						if (num != -1) {
+							popc[rd2][num].first = pop[rd2][j].first;
+						}
 					}
 					else if (pop[rd1][j].first.num != pop[rd2][j].first.num && pop[rd1][j].second.num != pop[rd2][j].second.num) {
 						int num2 = searchFir(pop[rd2][j].first.num, pop[rd1]);
-						if (pop[rd1][num2].second.num != pop[rd2][j].second.num) {
-							popc[rd1][num2].second = pop[rd2][j].second;
-							num = searchSec(pop[rd1][num2].second.num, pop[rd1]);
-							popc[rd1][num].second = pop[rd1][j].second;
-
+						if (num2 != -1) {
+							if (pop[rd1][num2].second.num != pop[rd2][j].second.num) {
+								popc[rd1][num2].second = pop[rd2][j].second;
+								num = searchSec(pop[rd1][num2].second.num, pop[rd1]);
+								if (num != -1) {
+									popc[rd1][num].second = pop[rd1][num2].second;
+								}
+							}
+						}
+						else {
+							int num2 = searchSec(pop[rd2][j].second.num, pop[rd1]);
+							if (num2 != -1) {
+								popc[rd1][num2].first = pop[rd2][j].first;
+							}
 						}
 						int num3 = searchFir(pop[rd1][j].first.num, pop[rd2]);
-						if (pop[rd2][num3].second.num != pop[rd1][j].second.num) {
-							popc[rd2][num3].second = pop[rd1][j].second;
-							num = searchSec(pop[rd2][num3].second.num, pop[rd2]);
-							popc[rd2][num].second = pop[rd2][j].second;
+						if (num3 != -1) {
+							if (pop[rd2][num3].second.num != pop[rd1][j].second.num) {
+								popc[rd2][num3].second = pop[rd1][j].second;
+								num = searchSec(pop[rd2][num3].second.num, pop[rd2]);
+								if (num != -1) {
+									popc[rd2][num].second = pop[rd2][j].second;
+								}
+							}
+						}
+						else {
+							int num3 = searchSec(pop[rd1][j].second.num, pop[rd2]);
+							if (num3 != -1) {
+								popc[rd2][num3].first = pop[rd1][j].first;
+							}
 						}
 					}
 				}
@@ -135,6 +163,7 @@ optSolution MA(Net A, Net B, double p, MApara para) {
 		//轮盘赌法选择局部搜索个体
 		double sum = 0.0;
 		vector<double> fitnessT;
+		fitnessT.clear();
 		fitnessT.insert(fitnessT.end(), fitness.begin(), fitness.end());
 		fitnessT.insert(fitnessT.end(), fitnessC.begin(), fitnessC.end());
 		for (int j = 0; j < fitnessT.size(); j++) {
@@ -272,18 +301,23 @@ optSolution MA(Net A, Net B, double p, MApara para) {
 				popnew[j] = popc[rd];
 			}
 		}
-		//冒泡排序
+		//冒泡排序 有问题
 		int size = fitnessT.size();
+		vector<double> sortfit(size, 0.0);
 		vector<int> sortNum(size, 0);
 		for (int j = 0; j < size; j++) {
 			sortNum[j] = j;
+			sortfit[j] = fitnessT[j];
 		}
 		for (int j = 0; j < size; j++) {
 			for (int k = 0; k < size - 1; k++) {
-				if (fitnessT[k] < fitnessT[k + 1]) {
+				if (sortfit[k] < sortfit[k + 1]) {
 					int temp = sortNum[k];
 					sortNum[k] = sortNum[k + 1];
 					sortNum[k + 1] = temp;
+					double temp2 = sortfit[k];
+					sortfit[k] = sortfit[k + 1];
+					sortfit[k + 1] = temp2;
 				}
 			}
 		}//冒泡排序结束

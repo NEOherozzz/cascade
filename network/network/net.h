@@ -1,15 +1,21 @@
 #pragma once
 #include <vector>
+#include <fstream>
+#include <iostream>
 #include <algorithm>
 #include <queue>
 #include <iterator>
+//#include "file-data.h"
 
 using namespace std;
 
-//const double ALPHA = 0.7;
-const double ALPHA = 0.7;
-//const double BETA = 0.2;
-const double BETA = 0.2;
+const double ALPHA = 1.8;
+const double BETA = 0.25;
+
+void print(int n)
+{
+	cout << n << '\0';
+}
 
 class Node {
 public:
@@ -18,10 +24,10 @@ public:
 public:
 	int num;//节点编号
 	int k;//节点度
-	double betweenness;//节点介数
+	//double betweenness;//节点介数
 	double load;//节点负载
 	double capacity;//节点容量
-	double cluster;//聚类系数
+	//double cluster;//聚类系数
 	int isIndependent;//是否构成依赖边:1-依赖边，0-无依赖关系
 	int isInGP;//是否在最大连通图内：1-在最大连通图内，0-不在
 	int status;//节点状态，是否失效：2-等待失效1-没失效，0-失效
@@ -54,13 +60,13 @@ public:
 	int edgeNum;//总边数
 
 public:
-	void initalDistanceMatrix();//计算距离矩阵
-	int distance(int i, int j);//节点i和节点j之间的距离
-	double avgDistance();//网络的平均路径长度
-	void initalCluster();//计算网络中节点聚类系数
-	double avgCluster();//网络平均聚类系数
+	//void initalDistanceMatrix();//计算距离矩阵
+	//int distance(int i, int j);//节点i和节点j之间的距离
+	//double avgDistance();//网络的平均路径长度
+	//void initalCluster();//计算网络中节点聚类系数
+	//double avgCluster();//网络平均聚类系数
 	double avgDegree();//网络平均度
-	vector<int> degreeDistribution();//网络节点度分布
+	//vector<int> degreeDistribution();//网络节点度分布
 	double cascade(int style);//级联失效:style=1度最大失效，style=2负载最大失效
 	int maxGraph();//最大联通子图
 
@@ -131,6 +137,8 @@ Net::Net(string style, int N, int m0, int m, int flag){
 				node[i].num = i + 1;
 				node[i].k = m0 - 1;
 				for (int j = i + 1; j < m0; j++) {
+					adjMatrix[i][j] = 1;
+					adjMatrix[j][i] = 1;
 					edge[fm] = Edge((fm + 1), (i + 1), (j + 1));
 					fm++;
 				}
@@ -179,6 +187,7 @@ Net::Net(string style, int N, int m0, int m, int flag){
 			}
 			ksum = ksum + m * 2;
 		}
+		//cout << (double)ksum / N << endl;//平均度
 		for (int i = 0; i < N; i++) {
 			node[i] = Node(node[i].num,node[i].k);
 		}
@@ -218,6 +227,7 @@ double Net::cascade(int style) {
 				temp = node[i];
 			}
 		}
+		//cout << "初始攻击的节点是：" << temp.num << endl;
 		Qfail.push(temp);
 		break;
 	}
@@ -237,7 +247,7 @@ double Net::cascade(int style) {
 					adjMatrix[temp.num - 1][i] = 0;
 					adjMatrix[i][temp.num - 1] = 0;
 					node[i].k--;
-					node[i].load += temp.load*node[i].capacity / neighborCsum;
+					node[i].load += (temp.load)*(node[i].capacity) / neighborCsum;
 					node[temp.num - 1].k--;
 					node[temp.num - 1].status = 0;//失效
 				}
@@ -248,7 +258,7 @@ double Net::cascade(int style) {
 				}
 			}
 			Qfail.pop();
-		}//对失效节点进行删边
+		}//对失效节点进行删边结束
 		for (int i = 0; i < len; i++) {
 			if (node[i].load > node[i].capacity && node[i].status == 1) {
 				Qfail.push(node[i]);
@@ -256,6 +266,24 @@ double Net::cascade(int style) {
 			}
 		}
 	}//级联失效结束
+	{//级联失效结束的图输出到文件
+		string fname = "级联失效.net";
+		ofstream netdata;
+		netdata.open(fname, ofstream::out | std::ofstream::trunc);
+		int nodeNum = node.size();
+		netdata << "*Vertices " << nodeNum << endl;
+		for (int i = 0; i < nodeNum; i++) {
+			netdata << (i + 1) << " \"" << node[i].num << "\"" << endl;
+		}
+		netdata << "*Matrix" << endl;
+		for (int i = 0; i < nodeNum; i++) {
+			for (int j = 0; j < nodeNum; j++) {
+				netdata << adjMatrix[i][j] << " ";
+			}
+			netdata << endl;
+		}
+		netdata.close();
+	}
 	//找最大联通子图
 	return maxGraph() / (double)len;
 }
@@ -353,6 +381,7 @@ private:
 //flag=1,随机连接；flag=2,同配连接（大到小）；flag=3，同配连接（小到大）；
 //falg=4，异配连接（A从大到小）；flag=5，异配连接（A从小到大）；flag=6，异配连接（对称模式）
 CoupledNet::CoupledNet(Net A1, Net B1, double p, int flag) {
+	//耦合连边后节点度没有变化，不对
 	A = A1;
 	B = B1;
 	int sizeA = A.node.size();
@@ -361,7 +390,10 @@ CoupledNet::CoupledNet(Net A1, Net B1, double p, int flag) {
 	coupleMatrix = vector<vector<int> >(sizeA, vector<int>(sizeB, 0));//耦合矩阵初始化
 	int edgeNum = (int) (sizeA*p);
 	vector<int> sortA1 = bubbleSort(A.node, 1);
+	//for_each(sortA1.begin(), sortA1.end(), print);
+	//cout << sortA1 << endl;
 	vector<int> sortA2 = bubbleSort(A.node, 2);
+	//for_each(sortA2.begin(), sortA2.end(), print);
 	vector<int> sortB1 = bubbleSort(B.node, 1);
 	vector<int> sortB2 = bubbleSort(B.node, 2);
 	vector<int> ANode;
@@ -370,13 +402,14 @@ CoupledNet::CoupledNet(Net A1, Net B1, double p, int flag) {
 	switch (flag) {
 	case 1://随机连接
 		for (int i = 0; i < edgeNum; i++) {
+			//srand((unsigned)time(NULL));
 			int rand1, rand2;
 			do {
 				rand1 = rand() % sizeA;
 			} while (isInVector(rand1, ANode));
 			do {
 				rand2 = rand() % sizeB;
-			} while (isInVector(rand2, ANode));
+			} while (isInVector(rand2, BNode));
 			ANode.push_back(rand1);
 			BNode.push_back(rand2);
 			A.node[rand1].isIndependent = 1;
@@ -434,6 +467,10 @@ CoupledNet::CoupledNet(Net A1, Net B1, double p, int flag) {
 		}
 		break;
 	}
+	//测试
+	//for (int i = 0; i < coupleNodes.size(); i++) {
+	//	cout << "A" << coupleNodes[i].first.num << "B" << coupleNodes[i].second.num << endl;
+	//}
 }
 CoupledNet::CoupledNet(Net A1, Net B1, vector<vector<int> > coupleMatrix1) {
 	A = A1;
@@ -467,26 +504,38 @@ vector<int> CoupledNet::bubbleSort(vector<Node> node,int flag) {
 	int size = node.size();
 	int temp = 0;
 	vector<int> sortNum(size,0);
+	vector<int> sortK(size, 0);
 	for (int i = 0; i < size; i++) {
 		sortNum[i] = node[i].num;
+		sortK[i] = node[i].k;
 	}
+	//cout << "节点编号";
+	//for_each(sortNum.begin(), sortNum.end(), print);
 	switch (flag) {
 	case 1://从大到小排序
 		for (int i = 0; i < size; i++) {
 			for (int j = 0; j < size - 1; j++) {
-				if (node[j].k < node[j + 1].k) {
-					sortNum[j] = node[j + 1].num;
-					sortNum[j + 1] = node[j].num;
+				if (sortK[j] < sortK[j+1]) {
+					temp = sortK[j];
+					sortK[j] = sortK[j + 1];
+					sortK[j + 1] = temp;
+					temp = sortNum[j];
+					sortNum[j] = sortNum[j + 1];
+					sortNum[j + 1] = temp;
 				}
 			}
 		}
 		break;
 	case 2://从小到大排序
 		for (int i = 0; i < size; i++) {
-			for (int j = i; j < size-1; j++) {
-				if (node[j].k > node[j + 1].k) {
-					sortNum[j] = node[j + 1].num;
-					sortNum[j + 1] = node[j].num;
+			for (int j = 0; j < size-1; j++) {
+				if (sortK[j] > sortK[j + 1]) {
+					temp = sortK[j];
+					sortK[j] = sortK[j + 1];
+					sortK[j + 1] = temp;
+					temp = sortNum[j];
+					sortNum[j] = sortNum[j + 1];
+					sortNum[j + 1] = temp;
 				}
 			}
 		}

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <time.h>
 #include <iostream>
 #include <vector>
 #include "net.h"
@@ -10,6 +11,7 @@ using namespace std;
 void randtest();
 
 int main() {
+	srand((unsigned)time(NULL));
 	int Matrix[10][10] = { { 0,1,0,0,0,1,0,0,0,0 },{ 1,0,1,0,0,0,1,0,0,0 },{ 0,1,0,1,0,0,0,1,0,0 },{ 0,0,1,0,1,0,0,0,1,0 },{ 0,0,0,1,0,0,0,0,0,1 },{ 1,0,0,0,0,0,0,1,0,1 },{ 0,1,0,0,0,0,0,1,0,0 },{ 0,0,1,0,0,1,1,0,1,0 },{ 0,0,0,1,0,0,0,1,0,0 },{ 0,0,0,0,1,1,0,0,0,0 }};
 	vector<vector<int> > matrix(10,vector<int>(10));
 	for (int i = 0; i < 10; i++) {
@@ -19,7 +21,7 @@ int main() {
 	}
 	//cout << matrix.size() << matrix[1].size() << endl;
 	//Net myNet = Net(matrix);
-	Net myNet = Net("ba",30,2,2,1);
+	Net myNet = Net("ba", 20, 2, 2, 1);//初始完全连接
 	//cout << myNet.nodeNum << endl;
 	//for (int i = 0; i < myNet.nodeNum; i++) {
 	//	cout << "节点" << myNet.node[i].num << "的度为" << myNet.node[i].k << endl;
@@ -30,14 +32,17 @@ int main() {
 	//	cout << "\n" << endl;
 	//}
 	//randtest();
-	Net myNet2 = Net("ba", 30, 2, 2, 1);
-	//CoupledNet CNet(myNet, myNet2, 1, 6);
-	//cout << CNet.cascade(1) << endl;
+	Net myNet2 = Net("ba", 20, 2, 2, 1);
+	CoupledNet CNet(myNet, myNet2, 0.5, 1);
+	CoupledNet CNet2(myNet, myNet2, 0.5, 1);
+	cout << CNet.cascade(2) << endl;
 	//MA算法求解最优连边
-	//optSolution opt=MA(myNet, myNet2, 1, MApara{50,100,0.8,0.5,0.9});
-	//cout << opt.robustness << endl;
+	optSolution opt=MA(myNet, myNet2, 0.5, MApara{50,100,0.8,0.5,0.9});
+	cout << opt.robustness << endl;
 	dataOutPajek(myNet,"A网络");
 	dataOutPajek(myNet2, "B网络");
+	dataOutPajek(CNet, "AB耦合网络");
+	dataOutPajek(CNet2, "AB耦合网络2");
 	system("pause");
 	return 0;
 }
